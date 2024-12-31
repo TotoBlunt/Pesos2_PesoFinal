@@ -23,20 +23,6 @@ if upload_file is not None:
         st.write('### Vista previa de los datos')
         st.write(df.head())
 
-        # Convertir variables categóricas
-        categorical_cols = df.select_dtypes(include=['object']).columns
-        for col in categorical_cols:
-            le = LabelEncoder()
-            df[col] = le.fit_transform(df[col])
-
-        # Selección de características
-        X = df.drop(['PesoFinal', 'SiNoPesoFinal', 'IEP', 'ICA', 'GananciaDiaVenta', 'DiasSaca'], axis=1)
-        y = df['SiNoPesoFinal']
-
-        selector = SelectKBest(f_classif, k=20)
-        X_selected = selector.fit_transform(X, y)
-        selected_features = X.columns[selector.get_support()]
-        st.write("#### Características seleccionadas:", selected_features)
 
         # División de datos
         X_model = df[['PesoSem1', 'PesoSem2', 'PesoSem3', 'PesoSem4']]
