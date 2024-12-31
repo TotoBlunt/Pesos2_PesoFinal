@@ -17,7 +17,7 @@ import numpy as np
 from datetime import datetime
 
 #Titulo para el app
-st.title("Proyecto Productivo para la prediccion del peso de pollos usando variables descritas por el modelo SelectcKbest luego hacer las predicciones usando el Modelo Ensemble, con Streamlit(v1)")
+st.title("Proyecto Productivo para la prediccion del peso de pollos usando variables descritas por el modelo SelectcKbest luego hacer las predicciones usando el Modelo Ensemble, con Streamlit(v1), Usando Solo pesos de 4 semanas")
 
 #Subir archivo de excel
 upload_file = st.file_uploader('Sube un archivo Excel',type=['xlsx'])
