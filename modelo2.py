@@ -2,10 +2,10 @@ from sklearn.ensemble import VotingRegressor, RandomForestRegressor, GradientBoo
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.neighbors import KNeighborsRegressor
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
-from sklearn.feature_selection import SelectKBest, f_classif
-from sklearn.preprocessing import LabelEncoder
+from sklearn.feature_selection import SelectKBest, mutual_info_regression
+from sklearn.preprocessing import LabelEncoder, StandardScaler, PolynomialFeatures
 import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
@@ -23,19 +23,52 @@ if upload_file is not None:
         st.write('### Vista previa de los datos')
         st.write(df.head())
 
-
         # División de datos
-        X_model = df[['PesoSem1', 'PesoSem2', 'PesoSem3', 'PesoSem4']]
-        y_model = df['PesoFinal']
-        x_train, x_test, y_train, y_test = train_test_split(X_model, y_model, test_size=0.3, random_state=42)
+        X = df[['PesoSem1', 'PesoSem2', 'PesoSem3', 'PesoSem4']]
+        y = df['PesoFinal']
 
-        # Modelos
+        # Generación de características polinómicas
+        poly = PolynomialFeatures(degree=2, include_bias=False)
+        X_poly = poly.fit_transform(X)
+
+        # Escalado de datos
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X_poly)
+
+        # Selección de características
+        selector = SelectKBest(score_func=mutual_info_regression, k=8)
+        X_selected = selector.fit_transform(X_scaled, y)
+
+        # División de los datos
+        x_train, x_test, y_train, y_test = train_test_split(X_selected, y, test_size=0.3, random_state=42)
+
+        # Búsqueda de hiperparámetros para RandomForest
+        rf = RandomForestRegressor(random_state=42)
+        param_grid_rf = {
+            'n_estimators': [100, 200, 300],
+            'max_depth': [8, 10, 12],
+            'min_samples_split': [2, 5, 10]
+        }
+        grid_rf = GridSearchCV(rf, param_grid_rf, cv=5, scoring='r2')
+        grid_rf.fit(x_train, y_train)
+
+        # Búsqueda de hiperparámetros para GradientBoosting
+        gb = GradientBoostingRegressor(random_state=42)
+        param_grid_gb = {
+            'n_estimators': [100, 200, 300],
+            'learning_rate': [0.01, 0.1, 0.2],
+            'max_depth': [3, 5, 7]
+        }
+        grid_gb = GridSearchCV(gb, param_grid_gb, cv=5, scoring='r2')
+        grid_gb.fit(x_train, y_train)
+
+        # Modelos con mejores hiperparámetros
         models = [
             ("decision_tree", DecisionTreeRegressor(max_depth=6, random_state=42)),
             ("linear_regression", LinearRegression()),
             ("k_neighbors", KNeighborsRegressor(n_neighbors=7, weights='distance')),
-            ("random_forest", RandomForestRegressor(n_estimators=100, max_depth=8, random_state=42)),
-            ("gradient_boosting", GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, random_state=42))
+            ("random_forest", grid_rf.best_estimator_),
+            ("gradient_boosting", grid_gb.best_estimator_)
         ]
 
         # Ensamble
@@ -75,7 +108,10 @@ if upload_file is not None:
 
             if st.button("Realizar predicción"):
                 input_data = np.array([[peso1, peso2, peso3, peso4]])
-                prediction = ensemble_model.predict(input_data)[0]
+                input_data_poly = poly.transform(input_data)
+                input_data_scaled = scaler.transform(input_data_poly)
+                input_data_selected = selector.transform(input_data_scaled)
+                prediction = ensemble_model.predict(input_data_selected)[0]
                 st.write(f"El peso final predicho es: {prediction:.2f} kg")
 
     except Exception as e:
